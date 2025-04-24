@@ -42,3 +42,9 @@ pip install -r requirements.txt
 ```bash
 jupyter notebook 12321774_K23SG_CA2.ipynb
 ```
+##👨‍💻 Author
+###Adarsh Kumar
+- `GitHub: Adarsh-kumar6534`
+
+##📜 License
+###This project is open-source and available under the MIT License.
