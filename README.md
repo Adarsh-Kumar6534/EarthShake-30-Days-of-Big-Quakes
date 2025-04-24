@@ -16,3 +16,19 @@ The notebook loads a CSV file named `earthquake_data.csv`, checks for missing va
   - `horizontalError`
   - `magError`
   - `magNst`
+## 🧰 Technologies Used
+
+- Python 3.x
+- Jupyter Notebook
+- `pandas` - Data manipulation
+- `matplotlib` - Visualization
+- `seaborn` - Statistical plotting
+- `plotly` - Interactive charts (if applicable)
+
+## 🚀 How to Use
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Adarsh-kumar6534/earthquake-data-analysis.git
+cd earthquake-data-analysis
