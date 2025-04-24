@@ -158,3 +158,240 @@ app.layout = html.Div([
         ], style={'width': '75%', 'background': 'linear-gradient(135deg, #121212, #1e1e1e)', 'minHeight': '100vh'})
     ], style={'display': 'flex', 'flexDirection': 'row', 'animation': 'fadeIn 1s'})
 ], style={'background': 'linear-gradient(135deg, #1a1a1a, #2a2a2a, #3a3a3a)', 'minHeight': '100vh'})
+# Animation CSS
+app.css.append_css({
+    'external_url': 'https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css'
+})
+
+# Custom colormap from EDA
+custom_colors = ['#f2f2f2', '#b87333', '#d2691e', '#ff7f50', '#dda0dd', '#8b0000', '#000000']
+custom_cmap = LinearSegmentedColormap.from_list("custom_palette", custom_colors, N=256)
+
+# Helper functions for plots
+def create_hotspot_map(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    sampled_df = filtered_df.sample(n=min(1000, len(filtered_df)), random_state=42) if len(filtered_df) > 1000 else filtered_df
+    fig = px.scatter_geo(
+        sampled_df,
+        lat='latitude',
+        lon='longitude',
+        color='mag',
+        size='mag',
+        hover_name='place',
+        hover_data={'mag': True, 'latitude': True, 'longitude': True, 'time': True},
+        projection='natural earth',
+        title='Global Earthquake Hotspots',
+        color_continuous_scale='OrRd',
+        template='plotly_dark'
+    )
+    fig.update_layout(
+        title_font=dict(size=28, color='#FF6F61'),
+        title_x=0.5,
+        margin=dict(l=0, r=0, t=60, b=0),
+        height=600,
+        showlegend=True
+    )
+    return fig
+
+def create_magnitude_trends(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    filtered_df = filtered_df.sort_values(by='time')
+    sampled_df = filtered_df.sample(n=min(1000, len(filtered_df)), random_state=42) if len(filtered_df) > 1000 else filtered_df
+    fig = px.scatter(
+        sampled_df,
+        x='time',
+        y='mag',
+        color='mag',
+        color_continuous_scale='Turbo',
+        hover_data=['place', 'mag', 'latitude', 'longitude', 'time'],
+        title='Earthquake Magnitude Trends Over Time'
+    )
+    fig.update_layout(
+        template='plotly_dark',
+        title_font=dict(size=24, color='#FF8E53'),
+        xaxis_title='Date',
+        yaxis_title='Magnitude',
+        title_x=0.5,
+        margin=dict(l=50, r=50, t=60, b=50),
+        height=500
+    )
+    return fig
+
+def create_depth_histogram(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(x=filtered_df['depth'], nbinsx=30, marker_color='#00CED1', opacity=0.8))
+    fig.update_layout(
+        template='plotly_dark',
+        title='Distribution of Earthquake Depths',
+        title_font=dict(size=22, color='#FF8E53'),
+        xaxis_title='Depth (km)',
+        yaxis_title='Frequency',
+        title_x=0.5,
+        margin=dict(l=50, r=50, t=60, b=50),
+        height=500
+    )
+    return fig
+
+def create_mag_depth_scatter(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    sampled_df = filtered_df.sample(n=min(1000, len(filtered_df)), random_state=42) if len(filtered_df) > 1000 else filtered_df
+    fig = px.scatter(
+        sampled_df,
+        x='depth',
+        y='mag',
+        color='mag',
+        color_continuous_scale='plasma',
+        hover_data=['place', 'mag', 'depth'],
+        title='Magnitude vs Depth of Earthquakes'
+    )
+    fig.update_layout(
+        template='plotly_dark',
+        title_font=dict(size=22, color='#FF6F61'),
+        xaxis_title='Depth (km)',
+        yaxis_title='Magnitude',
+        title_x=0.5,
+        margin=dict(l=50, r=50, t=60, b=50),
+        height=500
+    )
+    return fig
+
+def create_3d_depth_plot(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    sampled_df = filtered_df.sample(n=min(500, len(filtered_df)), random_state=42) if len(filtered_df) > 500 else filtered_df
+    fig = go.Figure(data=[
+        go.Scatter3d(
+            x=sampled_df['longitude'],
+            y=sampled_df['latitude'],
+            z=sampled_df['depth'] * -1,
+            mode='markers',
+            marker=dict(size=5, color=sampled_df['mag'], colorscale='Viridis', showscale=True),
+            text=sampled_df['place'],
+            hoverinfo='text+x+y+z'
+        )
+    ])
+    fig.update_layout(
+        template='plotly_dark',
+        title='3D Earthquake Depth Visualization',
+        title_font=dict(size=22, color='#FF6F61'),
+        title_x=0.5,
+        scene=dict(
+            xaxis_title='Longitude',
+            yaxis_title='Latitude',
+            zaxis_title='Depth (km)',
+            xaxis=dict(color='white'),
+            yaxis=dict(color='white'),
+            zaxis=dict(color='white')
+        ),
+        margin=dict(l=0, r=0, t=60, b=0),
+        height=500
+    )
+    return fig
+
+def create_region_frequency(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    top_regions = filtered_df['region'].value_counts().head(10).reset_index()
+    top_regions.columns = ['region', 'count']
+    fig = px.bar(
+        top_regions,
+        x='count',
+        y='region',
+        orientation='h',
+        title='Top 10 Regions by Earthquake Frequency',
+        color='count',
+        color_continuous_scale='magma'
+    )
+    fig.update_layout(
+        template='plotly_dark',
+        title_font=dict(size=22, color='#FF8E53'),
+        xaxis_title='Number of Earthquakes',
+        yaxis_title='Region',
+        title_x=0.5,
+        margin=dict(l=200, r=50, t=60, b=50),
+        height=500
+    )
+    return fig
+
+def create_region_avg_magnitude(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    avg_mag_by_region = filtered_df.groupby('region')['mag'].mean().sort_values(ascending=False).head(10).reset_index()
+    fig = px.bar(
+        avg_mag_by_region,
+        x='mag',
+        y='region',
+        orientation='h',
+        title='Top 10 Regions with Highest Average Magnitude',
+        color='mag',
+        color_continuous_scale='plasma'
+    )
+    fig.update_layout(
+        template='plotly_dark',
+        title_font=dict(size=22, color='#FF6F61'),
+        xaxis_title='Average Magnitude',
+        yaxis_title='Region',
+        title_x=0.5,
+        margin=dict(l=200, r=50, t=60, b=50),
+        height=500
+    )
+    return fig
+
+def create_risk_zones(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    risk_df = filtered_df.groupby('region').agg({
+        'id': 'count',
+        'mag': 'mean'
+    }).rename(columns={'id': 'quake_count', 'mag': 'avg_magnitude'}).reset_index()
+    risk_df['risk_score'] = risk_df['quake_count'] * risk_df['avg_magnitude']
+    risk_df = risk_df.sort_values(by='risk_score', ascending=False).head(15)
+    fig = px.scatter(
+        risk_df,
+        x='quake_count',
+        y='avg_magnitude',
+        size='risk_score',
+        color='region',
+        hover_data=['risk_score'],
+        title='High-Risk Earthquake Zones (Top 15)'
+    )
+    fig.update_layout(
+        template='plotly_dark',
+        title_font=dict(size=22, color='#FF6F61'),
+        xaxis_title='Number of Earthquakes',
+        yaxis_title='Average Magnitude',
+        title_x=0.5,
+        margin=dict(l=50, r=50, t=60, b=50),
+        height=500
+    )
+    return fig
+
+def create_magnitude_category(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    freq_data = filtered_df['Magnitude_Category'].value_counts().sort_index().reset_index()
+    freq_data.columns = ['Category', 'Count']
+    fig = px.bar(
+        freq_data,
+        x='Count',
+        y='Category',
+        orientation='h',
+        title='Earthquake Frequency by Magnitude Category',
+        color='Category',
+        color_discrete_sequence=['#FF6F61', '#FF8E53', '#FFCC70']
+    )
+    fig.update_layout(
+        template='plotly_dark',
+        title_font=dict(size=20, color='#FFCC70'),
+        xaxis_title='Number of Earthquakes',
+        yaxis_title='Magnitude Category',
+        title_x=0.5,
+        margin=dict(l=200, r=50, t=60, b=50),
+        height=500
+    )
+    return fig
