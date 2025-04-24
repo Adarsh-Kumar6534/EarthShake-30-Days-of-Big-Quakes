@@ -570,3 +570,26 @@ def reset_filters(n_clicks):
      Input('region-dropdown', 'value'),
      Input('depth-slider', 'value')]
 )
+def download_data(n_clicks, start_date, end_date, mag_range, regions, depth_range):
+    if n_clicks:
+        filtered_df = df.copy()
+        start_date = pd.to_datetime(start_date).tz_localize('UTC')
+        end_date = pd.to_datetime(end_date).tz_localize('UTC')
+        filtered_df = filtered_df[
+            (filtered_df['time'] >= start_date) &
+            (filtered_df['time'] <= end_date) &
+            (filtered_df['mag'] >= mag_range[0]) &
+            (filtered_df['mag'] <= mag_range[1]) &
+            (filtered_df['depth'] >= depth_range[0]) &
+            (filtered_df['depth'] <= depth_range[1])
+        ]
+        if regions and regions != ['All']:
+            if isinstance(regions, str):
+                regions = [regions]
+            filtered_df = filtered_df[filtered_df['region'].isin(regions)]
+        return dcc.send_data_frame(filtered_df.to_csv, "filtered_earthquake_data.csv")
+    raise PreventUpdate
+
+# Run the app
+if __name__ == '__main__':
+    app.run(debug=True, port=8050)
