@@ -32,3 +32,13 @@ The notebook loads a CSV file named `earthquake_data.csv`, checks for missing va
 ```bash
 git clone https://github.com/Adarsh-kumar6534/earthquake-data-analysis.git
 cd earthquake-data-analysis
+```
+
+### 2. Install Required Dependencies
+```bash
+pip install -r requirements.txt
+```
+### 3. Launch the Notebook
+```bash
+jupyter notebook 12321774_K23SG_CA2.ipynb
+```
