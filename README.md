@@ -25,7 +25,7 @@ The notebook loads a CSV file named `earthquake_data.csv`, checks for missing va
 - `seaborn` - Statistical plotting
 - `plotly` - Interactive charts (if applicable)
 
-## 🚀 How to Use
+# 🚀 How to Use
 
 ### 1. Clone the Repository
 
