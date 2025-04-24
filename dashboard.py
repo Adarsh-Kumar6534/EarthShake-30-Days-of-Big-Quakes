@@ -193,7 +193,7 @@ def create_hotspot_map(filtered_df):
         showlegend=True
     )
     return fig
-
+#Creating mangnitude trends
 def create_magnitude_trends(filtered_df):
     if filtered_df.empty:
         return go.Figure()
@@ -218,7 +218,7 @@ def create_magnitude_trends(filtered_df):
         height=500
     )
     return fig
-
+#Histogram
 def create_depth_histogram(filtered_df):
     if filtered_df.empty:
         return go.Figure()
@@ -590,6 +590,5 @@ def download_data(n_clicks, start_date, end_date, mag_range, regions, depth_rang
         return dcc.send_data_frame(filtered_df.to_csv, "filtered_earthquake_data.csv")
     raise PreventUpdate
 
-# Run the app
 if __name__ == '__main__':
     app.run(debug=True, port=8050)
