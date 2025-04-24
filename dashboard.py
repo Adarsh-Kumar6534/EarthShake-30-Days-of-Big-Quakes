@@ -395,3 +395,178 @@ def create_magnitude_category(filtered_df):
         height=500
     )
     return fig
+def create_magnitude_depth_time(filtered_df):
+    if filtered_df.empty:
+        return go.Figure()
+    sampled_df = filtered_df.sample(n=min(1000, len(filtered_df)), random_state=42) if len(filtered_df) > 1000 else filtered_df
+    fig = px.scatter(
+        sampled_df,
+        x='depth',
+        y='mag',
+        animation_frame=sampled_df['time'].dt.strftime('%Y-%m-%d'),
+        animation_group='place',
+        color='mag',
+        size='mag',
+        hover_data=['place', 'time'],
+        title='Magnitude and Depth Over Time (Animated)',
+        color_continuous_scale='Viridis'
+    )
+    fig.update_layout(
+        template='plotly_dark',
+        title_font=dict(size=20, color='#FFCC70'),
+        xaxis_title='Depth (km)',
+        yaxis_title='Magnitude',
+        title_x=0.5,
+        margin=dict(l=50, r=50, t=60, b=50),
+        height=500
+    )
+    fig.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 300
+    fig.layout.updatemenus[0].buttons[0].args[1]['transition']['duration'] = 200
+    return fig
+
+# Callback for tab content and graph selector visibility
+@app.callback(
+    [Output('tab-content', 'children'),
+     Output('graph-selector-dropdown', 'style'),
+     Output('graph-selector-dropdown', 'options'),
+     Output('graph-selector-dropdown', 'value')],
+    [Input('tab-selector', 'value'),
+     Input('date-picker', 'start_date'),
+     Input('date-picker', 'end_date'),
+     Input('mag-slider', 'value'),
+     Input('region-dropdown', 'value'),
+     Input('depth-slider', 'value'),
+     Input('graph-selector-dropdown', 'value')]
+)
+def update_tab(tab, start_date, end_date, mag_range, regions, depth_range, graph_select):
+    if not all([start_date, end_date, mag_range, depth_range]):
+        return (html.Div(["Error: Missing input data"], style={'color': 'red', 'fontSize': '18px', 'textAlign': 'center'}),
+                {'display': 'none'}, [{'label': 'None', 'value': 'none'}], 'none')
+
+    start_date = pd.to_datetime(start_date).tz_localize('UTC')
+    end_date = pd.to_datetime(end_date).tz_localize('UTC')
+    print(f"Start Date: {start_date}, End Date: {end_date}, Types: {type(start_date)}, {type(end_date)}")
+
+    filtered_df = df.copy()
+    try:
+        filtered_df = filtered_df[
+            (filtered_df['time'] >= start_date) &
+            (filtered_df['time'] <= end_date) &
+            (filtered_df['mag'] >= mag_range[0]) &
+            (filtered_df['mag'] <= mag_range[1]) &
+            (filtered_df['depth'] >= depth_range[0]) &
+            (filtered_df['depth'] <= depth_range[1])
+        ]
+        if regions and regions != ['All']:
+            if isinstance(regions, str):
+                regions = [regions]
+            filtered_df = filtered_df[filtered_df['region'].isin(regions)]
+        elif regions == ['All']:
+            pass
+        print(f"Filtered data shape: {filtered_df.shape}, Time dtype: {filtered_df['time'].dtype}")
+        if filtered_df.empty:
+            return (html.Div(["No data available for selected filters"], style={'color': 'white', 'fontSize': '18px', 'textAlign': 'center'}),
+                    {'display': 'none'}, [{'label': 'None', 'value': 'none'}], 'none')
+    except Exception as e:
+        return (html.Div([f"Error filtering data: {str(e)}"], style={'color': 'red', 'fontSize': '18px', 'textAlign': 'center'}),
+                {'display': 'none'}, [{'label': 'None', 'value': 'none'}], 'none')
+
+    selector_style = {'width': '200px', 'marginBottom': '20px', 'fontSize': '16px', 'color': '#000000', 'background': 'linear-gradient(45deg, #FF6F61, #FF8E53)', 'border': '1px solid #FF6F61', 'borderRadius': '5px', 'display': 'none'}
+    selector_options = [{'label': 'None', 'value': 'none'}]
+
+    if tab in ['depth-mag', 'regional']:
+        selector_style['display'] = 'block'
+        if tab == 'depth-mag':
+            selector_options.append({'label': '3D Depth Visualization', 'value': '3d'})
+        elif tab == 'regional':
+            selector_options.append({'label': 'High-Risk Zones', 'value': 'risk'})
+        valid_values = [opt['value'] for opt in selector_options]
+        if graph_select not in valid_values:
+            graph_select = 'none'
+
+    if tab == 'overview':
+        return (html.Div([
+            html.Div([
+                dcc.Graph(figure=create_hotspot_map(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'}),
+            html.Div([
+                dcc.Graph(figure=create_magnitude_trends(filtered_df), style={'width': '100%', 'display': 'block'}),
+                html.Div([
+                    html.H4("Quick Stats", style={'color': '#FFCC70', 'fontSize': '22px', 'textShadow': '1px 1px 3px #000'}),
+                    html.P(f"Total Quakes: {len(filtered_df)}", style={'color': '#FFCC70', 'fontSize': '18px'}),
+                    html.P(f"Max Magnitude: {filtered_df['mag'].max():.1f}" if not filtered_df.empty else "N/A", style={'color': '#FFCC70', 'fontSize': '18px'})
+                ], style={'background': 'linear-gradient(135deg, #2a2a2a, #3a3a3a)', 'padding': '20px', 'borderRadius': '15px', 'marginTop': '20px', 'boxShadow': '3px 3px 10px #000'})
+            ], style={'width': '100%'})
+        ], style={'display': 'flex', 'flexDirection': 'column', 'gap': '40px'}),
+                selector_style, selector_options, graph_select)
+    elif tab == 'depth-mag':
+        content = [
+            html.Div([
+                dcc.Graph(figure=create_depth_histogram(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'}),
+            html.Div([
+                dcc.Graph(figure=create_mag_depth_scatter(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'})
+        ]
+        if graph_select == '3d':
+            content.append(html.Div([
+                dcc.Graph(figure=create_3d_depth_plot(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'}))
+        return (html.Div(content, style={'display': 'flex', 'flexDirection': 'column', 'gap': '40px'}),
+                selector_style, selector_options, graph_select)
+    elif tab == 'regional':
+        content = [
+            html.Div([
+                dcc.Graph(figure=create_region_frequency(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'}),
+            html.Div([
+                dcc.Graph(figure=create_region_avg_magnitude(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'})
+        ]
+        if graph_select == 'risk':
+            content.append(html.Div([
+                dcc.Graph(figure=create_risk_zones(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'}))
+        return (html.Div(content, style={'display': 'flex', 'flexDirection': 'column', 'gap': '40px'}),
+                selector_style, selector_options, graph_select)
+    elif tab == 'mag-breakdown':
+        return (html.Div([
+            html.Div([
+                dcc.Graph(figure=create_magnitude_category(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'}),
+            html.Div([
+                dcc.Graph(figure=create_magnitude_depth_time(filtered_df), style={'width': '100%', 'display': 'block'})
+            ], style={'width': '100%', 'marginBottom': '30px'})
+        ], style={'display': 'flex', 'flexDirection': 'column', 'gap': '40px'}),
+                selector_style, selector_options, graph_select)
+
+# Callback for reset button
+@app.callback(
+    [Output('date-picker', 'start_date'),
+     Output('date-picker', 'end_date'),
+     Output('mag-slider', 'value'),
+     Output('region-dropdown', 'value'),
+     Output('depth-slider', 'value')],
+    Input('btn-reset', 'n_clicks')
+)
+def reset_filters(n_clicks):
+    if n_clicks:
+        return (
+            df['time'].min().date(),
+            df['time'].max().date(),
+            [df['mag'].min(), df['mag'].max()],
+            ['All'],
+            [df['depth'].min(), df['depth'].max()]
+        )
+    raise PreventUpdate
+
+# Callback for download button
+@app.callback(
+    Output("download-data", "data"),
+    Input("btn-download", 'n_clicks'),
+    [Input('date-picker', 'start_date'),
+     Input('date-picker', 'end_date'),
+     Input('mag-slider', 'value'),
+     Input('region-dropdown', 'value'),
+     Input('depth-slider', 'value')]
+)
